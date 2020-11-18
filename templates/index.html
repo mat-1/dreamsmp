@@ -281,10 +281,14 @@ function highlightPlayerHistory(uuid) {
 	if (uuid)
 		for (let i in indexedHistory) {
 			const historyItem = indexedHistory[i]
-			if (historyItem.includes(uuid))
-				chart.data.datasets[0].colors.push('rgba(0,255,0,.5)')
-			else
-				chart.data.datasets[0].colors.push('rgba(0,255,0,.1)')
+			const liveHistoryItem = indexedLiveHistory[i]
+			let color = (
+				// definitely not cursed and very readable code
+				historyItem.includes(uuid)
+				? (liveHistoryItem.includes(uuid) ? 'rgba(255,0,0,.5)' : 'rgba(0,255,0,.5)')
+				: 'rgba(0,255,0,.1)'
+			)
+			chart.data.datasets[0].colors.push(color)
 		}
 	chart.update(0)
 }
