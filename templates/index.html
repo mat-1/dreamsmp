@@ -96,7 +96,14 @@ body {
 	color: inherit;
 	text-decoration: none;
 }
-
+#history-markers {
+	position: absolute;
+	color: rgba(255,255,255,.1);
+	font-size: .75rem
+}
+#history-markers > span {
+	position: relative
+}
 
 
 @media only screen and (max-width: 450px) {
@@ -380,6 +387,9 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 </header>
 <div id="history">
 	<div class="chartAreaWrapper">
+		<span id="history-markers">
+			<span style="left:1.5rem;">End of Manberg-Pogtopia war, data started getting recorded here</span>
+		</span>
 		<div class="chartAreaWrapper2">
 			<canvas id="historyChart"></canvas>
 		</div>
