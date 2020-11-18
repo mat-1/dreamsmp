@@ -23,7 +23,8 @@ body {
 }
 #main-title {
 	text-align: center;
-	font-size: 5rem
+	font-size: 5rem;
+	margin-bottom: 0;
 }
 #player-list {
 	width: max-content;
@@ -64,6 +65,10 @@ body {
 }
 .playtime:hover {
 	opacity: 1
+}
+#subtitle {
+	text-align: center;
+	opacity: .5
 }
 
 @media only screen and (max-width: 450px) {
@@ -317,7 +322,10 @@ chart.canvas.parentNode.style.width = '80vw';
 <script src="//cdn.matdoes.dev/dreamsmp/Chart.min.js"></script>
 {% endblock %}
 {% block body %}
-<h1 id="main-title">DreamSMP</h1>
+<header>
+	<h1 id="main-title">DreamSMP</h1>
+	<p id="subtitle">Players: {{ playercount }}/{{ maxplayers }} • Ping: {{ latency|int }}ms</p>
+</header>
 <div id="history">
 	<canvas id="historyChart"></canvas>
 </div>

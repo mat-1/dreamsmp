@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import motor.motor_asyncio
 from aiohttp import web
 import aiohttp_jinja2
+import traceback
 import mcstatus
 import aiohttp
 import asyncio
@@ -34,14 +35,25 @@ online_coll = client.dreamsmp.online
 players_coll = client.dreamsmp.players
 
 player_list = None
+server_latency = None
 uuids_to_minutes_played = {}
+
+playercount = 0
+maxplayers = 120
 
 s = aiohttp.ClientSession()
 
 async def check_online():
+	global server_latency
+	global playercount
+	global maxplayers
 	status = await server.async_status()
 	players = []
-	for player in status.players.sample:
+	server_latency = status.latency
+	playercount = status.players.online
+	maxplayers = status.players.max
+	
+	for player in status.players.sample or []:
 		uuid = player.id.replace('-', '')
 		await add_new_player_if_unknown(player.name, uuid)
 		live = await check_streaming_from_uuid(uuid)
@@ -186,6 +198,7 @@ async def check_server_task():
 			await add_online(uuids, live_uuids)
 		except Exception as e:
 			print(type(e), e)
+			traceback.print_tb()
 
 async def get_history():
 	history = []
@@ -229,7 +242,10 @@ async def index(request):
 		'offline': offline_players,
 		'history': history,
 		'players_list': player_list,
-		'playtimes': uuids_to_minutes_played
+		'playtimes': uuids_to_minutes_played,
+		'latency': server_latency,
+		'playercount': playercount,
+		'maxplayers': maxplayers
 	}
 
 
