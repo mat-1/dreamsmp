@@ -1,6 +1,5 @@
 poetry.lock
 pyproject.toml
 __pycache__/
-aiohttp_jinja/
+aiohttp_jinja2/
 mcstatus/
-aiohttp_jinja/
