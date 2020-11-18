@@ -241,7 +241,7 @@ var chart = new Chart(ctx, {
 				{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
 				{% endfor %}
 			],
-			borderWidth: 1,
+			borderWidth: 2,
 			borderColor: 'rgba(0,255,0,.5)',
 			backgroundColor: 'rgba(0,255,0,.2)',
 		}]
