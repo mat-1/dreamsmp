@@ -4,6 +4,7 @@
 {{ super() }}
 <style>
 
+
 body {
 	font-family: sans-serif;
 	margin: 0
@@ -33,9 +34,30 @@ body {
 #history {
 	position: relative;
 	margin: 0 auto;
-	height: 40vh;
 	width: 80vw;
+	height: 50vh;
 }
+#history > canvas {
+	position: absolute;
+	left: 0;
+	top: 0;
+	pointer-events:none;
+}
+.chartAreaWrapper {
+	overflow-x: scroll;
+	position: relative;
+	width: 100%;
+	height: 100%;
+	scrollbar-color: #222 rgba(0,0,0,0);
+}
+
+.chartAreaWrapper2 {
+	position: relative;
+	height: 100%;
+	width: 100em
+}
+
+
 #chartjs-tooltip {
 	opacity: 1;
 	position: absolute;
@@ -74,6 +96,8 @@ body {
 	color: inherit;
 	text-decoration: none;
 }
+
+
 
 @media only screen and (max-width: 450px) {
   #main-title {
@@ -256,6 +280,7 @@ var chart = new Chart(ctx, {
 		}]
 	},
 	options: {
+		responsive: true,
 		maintainAspectRatio: false,
 		scales: {
 			yAxes: [{
@@ -283,12 +308,26 @@ var chart = new Chart(ctx, {
 		},
 		legend: {
 			display: false
+		},
+		animation: {
+			onComplete: function(animation) {
+				var sourceCanvas = chart.chart.canvas;
+				var copyWidth = chart.scales['y-axis-0'].width - 10;
+				var copyHeight = chart.scales['y-axis-0'].height + chart.scales['y-axis-0'].top + 10;
+				var targetCtx = document.getElementById('historyChartAxis').getContext('2d');
+				targetCtx.canvas.width = copyWidth;
+				targetCtx.canvas.height = copyHeight;
+				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+			}
 		}
+
 	}
 })
 
+let chartAreaWrapper = document.getElementsByClassName('chartAreaWrapper')[0]
+chartAreaWrapper.scrollTo(chartAreaWrapper.scrollWidth, 0);
+
 function highlightPlayerHistory(uuid) {
-	console.log('highlightPlayerHistory', uuid)
 	chart.data.datasets[0].colors = []
 	if (uuid)
 		for (let i in indexedHistory) {
@@ -306,7 +345,6 @@ function highlightPlayerHistory(uuid) {
 }
 
 for (playtimeEl of document.getElementsByClassName('playtime')) {
-	console.log(playtimeEl)
 	let userEl = playtimeEl.parentNode
 	let uuid = userEl.getAttribute('data-uuid')
 	if (uuid) {
@@ -319,8 +357,8 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 	}
 }
 
-chart.canvas.parentNode.style.height = '50vh';
-chart.canvas.parentNode.style.width = '80vw';
+// chart.canvas.parentNode.style.height = '50vh'
+// chart.canvas.parentNode.style.width = '80vw';
 
 
 })
@@ -334,7 +372,12 @@ chart.canvas.parentNode.style.width = '80vw';
 	<p id="subtitle">Players: {{ playercount }}/{{ maxplayers }} • Ping: {{ latency|int }}ms</p>
 </header>
 <div id="history">
-	<canvas id="historyChart"></canvas>
+	<div class="chartAreaWrapper">
+		<div class="chartAreaWrapper2">
+			<canvas id="historyChart"></canvas>
+		</div>
+	</div>
+	<canvas id="historyChartAxis" height="100%" width="0"></canvas>
 </div>
 
 {% macro user(player, online) -%}
