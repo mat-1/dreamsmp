@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+
+body {
+	font-family: sans-serif;
+	margin: 0
+}
+.user {
+	font-size: 3rem;
+}
+.avatar {
+	height: 1em;
+	image-rendering: crisp-edges;
+	image-rendering: pixelated;
+}
+.ign {
+	padding: 0;
+	top: -.1em;
+	position: relative;
+}
+#main-title {
+	text-align: center;
+	font-size: 5rem
+}
+#player-list {
+	width: max-content;
+	margin: 1em auto;
+}
+#history {
+	position: relative;
+	margin: 0 auto;
+	height: 40vh;
+	width: 80vw;
+}
+#chartjs-tooltip {
+	opacity: 1;
+	position: absolute;
+	background: rgba(0, 0, 0, .7);
+	color: white;
+	border-radius: 3px;
+	pointer-events: none;
+	-webkit-transform: translate(-50%, 0);
+	transform: translate(-50%, 0);
+}
+
+.chartjs-tooltip-key {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	margin-right: 10px;
+}
+.user.offline {
+	opacity: .5
+}
+.playtime {
+	font-size: .5em;
+	bottom: .5em;
+	position: relative;
+	opacity: .5;
+	transition-duration: 400ms
+}
+.playtime:hover {
+	opacity: 1
+}
+
+@media only screen and (max-width: 450px) {
+  #main-title {
+    font-size: 4rem
+  }
+}
+
+@media only screen and (max-width: 700px) {
+  .user {
+    font-size: 2rem
+  }
+}
+@media only screen and (max-width: 460px) {
+  .user {
+    font-size: 1.5rem
+  }
+}
+
+/* dark theme */
+body {
+	background-color: #111;
+	color: #eee
+}
+</style>
+<script>
+
+document.addEventListener('DOMContentLoaded', () => {
+
+const indexedHistory = [
+	{% for state in history %}[{% for player in state.players %}'{{ player }}',{% endfor %}],{% endfor %}
+]
+const indexedLiveHistory = [
+	{% for state in history %}[{% for player in state.live %}'{{ player }}',{% endfor %}],{% endfor %}
+]
+
+const allPlayers = [
+	{% for player in players_list %}{uuid:'{{ player.uuid }}',username:'{{ player.username }}'},{% endfor %}
+]
+
+function customTooltip(tooltipModel) {
+	// Tooltip Element
+	var tooltipEl = document.getElementById('chartjs-tooltip');
+
+	// Create element on first render
+	if (!tooltipEl) {
+			tooltipEl = document.createElement('div');
+			tooltipEl.id = 'chartjs-tooltip';
+			tooltipEl.innerHTML = '<table></table>';
+			document.body.appendChild(tooltipEl);
+	}
+
+	// Hide if no tooltip
+	if (tooltipModel.opacity === 0) {
+			tooltipEl.style.opacity = 0;
+			return;
+	}
+
+	// Set caret Position
+	tooltipEl.classList.remove('above', 'below', 'no-transform');
+	if (tooltipModel.yAlign) {
+			tooltipEl.classList.add(tooltipModel.yAlign);
+	} else {
+			tooltipEl.classList.add('no-transform');
+	}
+
+	function getBody(bodyItem) {
+			return bodyItem.lines;
+	}
+
+	let historicOnlinePlayers = indexedHistory[tooltipModel.dataPoints[0].index]
+	let historicStreamingPlayers = indexedLiveHistory[tooltipModel.dataPoints[0].index]
+
+	// Set Text
+	var titleLines = tooltipModel.title || [];
+	var bodyLines = []
+	for (const playerUuid of historicOnlinePlayers) {
+		let playerUsername = playerUuid // if the username is unknown just use the uuid
+		let player = allPlayers.find(p => p.uuid === playerUuid)
+		let isLive = historicStreamingPlayers.includes(playerUuid)
+		if (player) playerUsername = player.username
+		bodyLines.push(
+			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? " 🔴" : ""}`
+		)
+	}
+
+	var innerHtml = '<thead>';
+
+	titleLines.forEach(function(title) {
+			innerHtml += '<tr><th>' + title + '</th></tr>';
+	});
+	innerHtml += '</thead><tbody>';
+
+	bodyLines.forEach(function(body, i) {
+			// var colors = tooltipModel.labelColors[i];
+			var style = ''
+			// var style = 'background:' + colors.backgroundColor;
+			// style += '; border-color:' + colors.borderColor;
+			style += '; border-width: 2px';
+			var span = '<span style="' + style + '"></span>';
+			innerHtml += '<tr><td>' + span + body + '</td></tr>';
+	});
+	innerHtml += '</tbody>';
+
+	var tableRoot = tooltipEl.querySelector('table');
+	tableRoot.innerHTML = innerHtml;
+
+	// `this` will be the overall tooltip
+	var position = this._chart.canvas.getBoundingClientRect();
+
+	// Display, position, and set styles for font
+	tooltipEl.style.opacity = 1;
+	tooltipEl.style.position = 'absolute';
+	tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
+	tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
+	tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily;
+	tooltipEl.style.fontSize = tooltipModel.bodyFontSize + 'px';
+	tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle;
+	tooltipEl.style.padding = tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px';
+	tooltipEl.style.pointerEvents = 'none';
+}
+
+
+	var ctx = document.getElementById('historyChart').getContext('2d');
+	var chart = new Chart(ctx, {
+		type: 'line',
+		data: {
+			datasets: [{
+				label: 'Online',
+				data: [
+					{% for state in history %}
+					{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
+					{% endfor %}
+				],
+				borderWidth: 1,
+				borderColor: 'rgba(0,255,0,.5)',
+				backgroundColor: 'rgba(0,255,0,.2)',
+			}]
+		},
+		options: {
+			maintainAspectRatio: false,
+			scales: {
+				yAxes: [{
+					ticks: {
+						beginAtZero: true
+					}
+				}],
+				xAxes: [{
+					type: 'time',
+					time: {
+						unit: 'hour',
+					}
+				}]
+			},
+			tooltips: {
+				enabled: false,
+				intersect: false,
+				custom: customTooltip,
+				mode: 'index'
+			},
+			elements: {
+				point: {
+					radius: 0
+				}
+			}
+		}
+	})
+
+	chart.canvas.parentNode.style.height = '50vh';
+	chart.canvas.parentNode.style.width = '80vw';
+})
+</script>
+<script src="//cdn.matdoes.dev/dreamsmp/moment.min.js"></script>
+<script src="//cdn.matdoes.dev/dreamsmp/Chart.min.js"></script>
+{% endblock %}
+{% block body %}
+<h1 id="main-title">DreamSMP</h1>
+<div id="history">
+	<canvas id="historyChart"></canvas>
+</div>
+
+<div id="player-list">
+	{% for player in online|playtimesort %}
+		{% if player.live %}
+		<div class="user online">
+			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
+			<span class="ign">{{ player.name }}</span> 🔴
+			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
+		</div>
+		{% endif %}
+	{% endfor %}
+	{% for player in online|playtimesort %}
+		{% if not player.live %}
+		<div class="user online">
+			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
+			<span class="ign">{{ player.name }}</span>
+			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
+		</div>
+		{% endif %}
+	{% endfor %}
+	{% for player in offline|playtimesort %}
+	<div class="user offline">
+		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
+		<span class="ign">{{ player.username }}</span>
+		<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}
