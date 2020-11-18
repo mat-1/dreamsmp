@@ -179,7 +179,7 @@ function customTooltip(tooltipModel) {
 		let isLive = historicStreamingPlayers.includes(playerUuid)
 		if (player) playerUsername = player.username
 		bodyLines.push(
-			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? " 🔴" : ""}`
+			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? ` {{ streamingsvg|safe }}` : ""}`
 		)
 	}
 
@@ -394,7 +394,7 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink">{% endif %}
 		<span class="ign">
 			{{ player.name or player.username }}
-		</span>{% if player.live %}<span> 🔴</span>{% endif %}
+		</span>{% if player.live %}<span> {{ streamingsvg|safe }}</span>{% endif %}
 		{% if player.live_url %}</a>{% endif %}
 		<span class="playtime">{{ playtime(player.uuid) }} on record</span>
 		

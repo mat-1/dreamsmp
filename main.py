@@ -309,4 +309,5 @@ def uuid_to_playtime(uuid):
 jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
+jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 web.run_app(app)
