@@ -70,6 +70,10 @@ body {
 	text-align: center;
 	opacity: .5
 }
+.streamLink {
+	color: inherit;
+	text-decoration: none;
+}
 
 @media only screen and (max-width: 450px) {
   #main-title {
@@ -333,31 +337,33 @@ chart.canvas.parentNode.style.width = '80vw';
 	<canvas id="historyChart"></canvas>
 </div>
 
+{% macro user(player, online) -%}
+	<div class="user {% if online %}online{% else %}offline{% endif %}" data-uuid="{{ player.uuid }}">
+		
+		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
+		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink">{% endif %}
+		<span class="ign">
+			{{ player.name or player.username }}
+		</span>{% if player.live %}<span> 🔴</span>{% endif %}
+		{% if player.live_url %}</a>{% endif %}
+		<span class="playtime">{{ playtime(player.uuid) }} on record</span>
+		
+	</div>
+{%- endmacro %}
+
 <div id="player-list">
 	{% for player in online|playtimesort %}
 		{% if player.live %}
-		<div class="user online" data-uuid="{{ player.uuid }}">
-			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
-			<span class="ign">{{ player.name }}</span> 🔴
-			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
-		</div>
+			{{ user(player, true) }}
 		{% endif %}
 	{% endfor %}
 	{% for player in online|playtimesort %}
 		{% if not player.live %}
-		<div class="user online" data-uuid="{{ player.uuid }}">
-			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
-			<span class="ign">{{ player.name }}</span>
-			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
-		</div>
+			{{ user(player, true) }}
 		{% endif %}
 	{% endfor %}
 	{% for player in offline|playtimesort %}
-	<div class="user offline" data-uuid="{{ player.uuid }}">
-		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
-		<span class="ign">{{ player.username }}</span>
-		<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
-	</div>
+		{{ user(player, false) }}
 	{% endfor %}
 </div>
 {% endblock %}

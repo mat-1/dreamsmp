@@ -57,10 +57,12 @@ async def check_online():
 		uuid = player.id.replace('-', '')
 		await add_new_player_if_unknown(player.name, uuid)
 		live = await check_streaming_from_uuid(uuid)
+		print('live', live)
 		players.append({
 			'name': player.name,
 			'uuid': uuid,
-			'live': live
+			'live': live['live'],
+			'live_url': live.get('url')
 		})
 	return players
 
@@ -110,6 +112,12 @@ def uuid_to_twitch_id(uuid):
 		if player['uuid'] == uuid:
 			return player.get('twitch')
 
+def uuid_to_twitch_name(uuid):
+	for player in player_list:
+		if player['uuid'] == uuid:
+			print(player)
+			return player.get('twitch_name')
+
 def uuid_to_youtube_id(uuid):
 	for player in player_list:
 		if player['uuid'] == uuid:
@@ -121,11 +129,23 @@ async def check_streaming_from_uuid(uuid):
 	youtube_id = uuid_to_youtube_id(uuid)
 	if twitch_id:
 		if await check_streaming_twitch(twitch_id):
-			return True
+			twitch_name = uuid_to_twitch_name(uuid)
+			if twitch_name:
+				url = 'https://www.twitch.tv/' + twitch_name
+			else:
+				url = None
+			return {
+				'live': True,
+				'url': url
+			}
 	if youtube_id:
 		if await check_streaming_youtube(youtube_id):
-			return True
-	return False
+			return {
+				'live': True
+			}
+	return {
+		'live': False
+	}
 
 async def add_online(uuids, live_uuids):
 	await online_coll.insert_one({
@@ -146,6 +166,7 @@ async def fetch_players():
 			'username': player['username'],
 			'uuid': player['uuid'],
 			'twitch': player.get('twitch'),
+			'twitch_name': player.get('twitch_name'),
 			'youtube': player.get('youtube'),
 		})
 	player_list = players
@@ -279,6 +300,13 @@ def playtime_sort(items):
 		reverse=True
 	)
 
+def uuid_to_playtime(uuid):
+	if uuid not in uuids_to_minutes_played:
+		return '0 minutes'
+	else:
+		return minutes_to_string(uuids_to_minutes_played[uuid])
+
 jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
+jinja_env.globals['playtime'] = uuid_to_playtime
 web.run_app(app)
