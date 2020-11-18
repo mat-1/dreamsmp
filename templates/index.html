@@ -186,54 +186,127 @@ function customTooltip(tooltipModel) {
 	tooltipEl.style.pointerEvents = 'none';
 }
 
+Chart.defaults.coloredLine = Chart.defaults.line;
+Chart.controllers.coloredLine = Chart.controllers.line.extend({
+	draw: function(ease) {
+		var
+			startIndex = 0,
+			meta = this.getMeta(),
+			points = meta.data || [],
+			colors = this.getDataset().colors,
+			area = this.chart.chartArea,
+			originalDatasets = meta.dataset._children
+				.filter(function(data) {
+					return !isNaN(data._view.y);
+				});
 
-	var ctx = document.getElementById('historyChart').getContext('2d');
-	var chart = new Chart(ctx, {
-		type: 'line',
-		data: {
-			datasets: [{
-				label: 'Online',
-				data: [
-					{% for state in history %}
-					{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
-					{% endfor %}
-				],
-				borderWidth: 1,
-				borderColor: 'rgba(0,255,0,.5)',
-				backgroundColor: 'rgba(0,255,0,.2)',
-			}]
-		},
-		options: {
-			maintainAspectRatio: false,
-			scales: {
-				yAxes: [{
-					ticks: {
-						beginAtZero: true
-					}
-				}],
-				xAxes: [{
-					type: 'time',
-					time: {
-						unit: 'hour',
-					}
-				}]
-			},
-			tooltips: {
-				enabled: false,
-				intersect: false,
-				custom: customTooltip,
-				mode: 'index'
-			},
-			elements: {
-				point: {
-					radius: 0
-				}
+		function _setColor(newColor, meta) {
+			meta.dataset._view.borderColor = newColor;
+		}
+
+		if (!colors) {
+			Chart.controllers.line.prototype.draw.call(this, ease);
+			return;
+		}
+
+		for (var i = 2; i <= colors.length; i++) {
+			if (colors[i-1] !== colors[i]) {
+				_setColor(colors[i-1], meta);
+				meta.dataset._children = originalDatasets.slice(startIndex, i);
+				meta.dataset.draw();
+				startIndex = i - 1;
 			}
 		}
-	})
 
-	chart.canvas.parentNode.style.height = '50vh';
-	chart.canvas.parentNode.style.width = '80vw';
+		meta.dataset._children = originalDatasets.slice(startIndex);
+		meta.dataset.draw();
+		meta.dataset._children = originalDatasets;
+
+		points.forEach(function(point) {
+			point.draw(area);
+		});
+	}
+});
+
+
+
+var ctx = document.getElementById('historyChart').getContext('2d');
+var chart = new Chart(ctx, {
+	type: 'coloredLine',
+	data: {
+		datasets: [{
+			label: 'Online',
+			data: [
+				{% for state in history %}
+				{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
+				{% endfor %}
+			],
+			borderWidth: 1,
+			borderColor: 'rgba(0,255,0,.5)',
+			backgroundColor: 'rgba(0,255,0,.2)',
+		}]
+	},
+	options: {
+		maintainAspectRatio: false,
+		scales: {
+			yAxes: [{
+				ticks: {
+					beginAtZero: true
+				}
+			}],
+			xAxes: [{
+				type: 'time',
+				time: {
+					unit: 'hour',
+				}
+			}]
+		},
+		tooltips: {
+			enabled: false,
+			intersect: false,
+			custom: customTooltip,
+			mode: 'index'
+		},
+		elements: {
+			point: {
+				radius: 0
+			}
+		}
+	}
+})
+
+function highlightPlayerHistory(uuid) {
+	console.log('highlightPlayerHistory', uuid)
+	chart.data.datasets[0].colors = []
+	if (uuid)
+		for (let i in indexedHistory) {
+			const historyItem = indexedHistory[i]
+			if (historyItem.includes(uuid))
+				chart.data.datasets[0].colors.push('rgba(0,255,0,.5)')
+			else
+				chart.data.datasets[0].colors.push('rgba(0,255,0,.1)')
+		}
+	chart.update(0)
+}
+
+for (playtimeEl of document.getElementsByClassName('playtime')) {
+	console.log(playtimeEl)
+	let userEl = playtimeEl.parentNode
+	let uuid = userEl.getAttribute('data-uuid')
+	if (uuid) {
+		playtimeEl.addEventListener('mouseover', () => {
+			highlightPlayerHistory(uuid)
+		})
+		playtimeEl.addEventListener('mouseout', () => {
+			highlightPlayerHistory()
+		})
+	}
+}
+
+chart.canvas.parentNode.style.height = '50vh';
+chart.canvas.parentNode.style.width = '80vw';
+
+
 })
 </script>
 <script src="//cdn.matdoes.dev/dreamsmp/moment.min.js"></script>
@@ -248,7 +321,7 @@ function customTooltip(tooltipModel) {
 <div id="player-list">
 	{% for player in online|playtimesort %}
 		{% if player.live %}
-		<div class="user online">
+		<div class="user online" data-uuid="{{ player.uuid }}">
 			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
 			<span class="ign">{{ player.name }}</span> 🔴
 			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
@@ -257,7 +330,7 @@ function customTooltip(tooltipModel) {
 	{% endfor %}
 	{% for player in online|playtimesort %}
 		{% if not player.live %}
-		<div class="user online">
+		<div class="user online" data-uuid="{{ player.uuid }}">
 			<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
 			<span class="ign">{{ player.name }}</span>
 			<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>
@@ -265,7 +338,7 @@ function customTooltip(tooltipModel) {
 		{% endif %}
 	{% endfor %}
 	{% for player in offline|playtimesort %}
-	<div class="user offline">
+	<div class="user offline" data-uuid="{{ player.uuid }}">
 		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
 		<span class="ign">{{ player.username }}</span>
 		<span class="playtime">{{ playtimes[player.uuid]|minutes }} on record</span>

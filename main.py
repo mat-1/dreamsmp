@@ -173,16 +173,19 @@ async def check_server_task():
 	print(online_players)
 	while True:
 		await asyncio.sleep(60 - (time.time() % 60))
-		players = await check_online()
-		online_players = players
-		print(online_players)
-		uuids = []
-		live_uuids = []
-		for player in players:
-			uuids.append(player['uuid'].replace('-', ''))
-			if player['live']:
-				live_uuids.append(player['uuid'].replace('-', ''))
-		await add_online(uuids, live_uuids)
+		try:
+			players = await check_online()
+			online_players = players
+			print(online_players)
+			uuids = []
+			live_uuids = []
+			for player in players:
+				uuids.append(player['uuid'].replace('-', ''))
+				if player['live']:
+					live_uuids.append(player['uuid'].replace('-', ''))
+			await add_online(uuids, live_uuids)
+		except Exception as e:
+			print(type(e), e)
 
 async def get_history():
 	history = []
