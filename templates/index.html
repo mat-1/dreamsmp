@@ -304,6 +304,9 @@ var chart = new Chart(ctx, {
 		elements: {
 			point: {
 				radius: 0
+			},
+			line: {
+				tension: 0 // disables bezier curves
 			}
 		},
 		legend: {
@@ -318,9 +321,13 @@ var chart = new Chart(ctx, {
 				targetCtx.canvas.width = copyWidth;
 				targetCtx.canvas.height = copyHeight;
 				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
-			}
-		}
-
+			},
+			// duration: 0 // general animation time
+		},
+		hover: {
+				animationDuration: 0 // duration of animations when hovering an item
+		},
+		responsiveAnimationDuration: 0 // animation duration after a resize
 	}
 })
 
