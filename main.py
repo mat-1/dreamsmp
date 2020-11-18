@@ -74,9 +74,8 @@ async def check_streaming_youtube(youtube_id):
 		}
 	) as r:
 		html = await r.text()
-		with open('html.html', 'w') as f:
-			f.write(html)
-		data = json.loads(re.findall(r'window\["ytInitialData"\] = (.+?);\n', html)[0])
+		print(url)
+		data = json.loads(re.findall(r'(window\["ytInitialData"\]|var ytInitialData) = (.+?);', html)[0])
 		featured = data['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
 		if 'channelFeaturedContentRenderer' not in featured:
 			return False
