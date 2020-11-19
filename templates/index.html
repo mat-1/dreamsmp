@@ -3,8 +3,6 @@
 {% block head %}
 {{ super() }}
 <style>
-
-
 body {
 	font-family: sans-serif;
 	margin: 0
@@ -50,6 +48,13 @@ body {
 	height: 100%;
 	scrollbar-color: #222 rgba(0,0,0,0);
 }
+.chartAreaWrapper::-webkit-scrollbar {
+	background-color: rgba(0,0,0,0);
+}
+.chartAreaWrapper::-webkit-scrollbar-thumb {
+	background-color: #222;
+}
+
 
 .chartAreaWrapper2 {
 	position: relative;
@@ -83,9 +88,10 @@ body {
 	bottom: .5em;
 	position: relative;
 	opacity: .5;
-	transition-duration: 400ms
+	transition-duration: 400ms;
+	cursor: pointer
 }
-.playtime:hover {
+.playtime:hover, .playtime.active {
 	opacity: 1
 }
 #subtitle {
@@ -99,12 +105,30 @@ body {
 #history-markers {
 	position: absolute;
 	color: rgba(255,255,255,.1);
-	font-size: .75rem
+	font-size: .75rem;
+	height: 100%;
 }
 #history-markers > span {
-	position: relative
+	position: absolute;
+	white-space: pre;
 }
-
+#github-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 2em;
+	height: 2em;
+	margin: .5em;
+	opacity: .1;
+	transition-duration: 200ms
+}
+#github-button:hover {
+	opacity: .5
+}
+#github-button img {
+	width: 100%;
+	height: 100%;
+}
 
 @media only screen and (max-width: 450px) {
   #main-title {
@@ -329,7 +353,7 @@ var chart = new Chart(ctx, {
 				targetCtx.canvas.height = copyHeight;
 				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
 			},
-			// duration: 0 // general animation time
+			duration: 1
 		},
 		hover: {
 				animationDuration: 0 // duration of animations when hovering an item
@@ -356,17 +380,46 @@ function highlightPlayerHistory(uuid) {
 			chart.data.datasets[0].colors.push(color)
 		}
 	chart.update(0)
+	let activeUuid = activePlaytimeDisplay
+	if (activeUuid) {
+		let prevEl = document.querySelector(`div[data-uuid='${activeUuid}']`).getElementsByClassName('playtime')[0]
+		prevEl.classList.remove('active')
+	}
+	if (uuid) {
+		let playtimeEl = document.querySelector(`div[data-uuid='${uuid}']`).getElementsByClassName('playtime')[0]
+		playtimeEl.classList.add('active')
+	}
+
 }
+
+var activePlaytimeDisplay = null
+var clickedPlaytimeDisplay = false
 
 for (playtimeEl of document.getElementsByClassName('playtime')) {
 	let userEl = playtimeEl.parentNode
 	let uuid = userEl.getAttribute('data-uuid')
 	if (uuid) {
 		playtimeEl.addEventListener('mouseover', () => {
-			highlightPlayerHistory(uuid)
+			if (!clickedPlaytimeDisplay) {
+				highlightPlayerHistory(uuid)
+				activePlaytimeDisplay = uuid
+			}
+		})
+		playtimeEl.addEventListener('click', () => {
+			if (activePlaytimeDisplay == uuid && clickedPlaytimeDisplay) {
+				highlightPlayerHistory(null)
+				activePlaytimeDisplay = null
+				clickedPlaytimeDisplay = false
+			} else {
+				highlightPlayerHistory(uuid)
+				activePlaytimeDisplay = uuid
+				clickedPlaytimeDisplay = true
+			}
 		})
 		playtimeEl.addEventListener('mouseout', () => {
-			highlightPlayerHistory()
+			console.log('mouseout', clickedPlaytimeDisplay)
+			if (activePlaytimeDisplay == uuid && !clickedPlaytimeDisplay)
+				highlightPlayerHistory()
 		})
 	}
 }
@@ -381,14 +434,17 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 <script src="//cdn.matdoes.dev/dreamsmp/Chart.min.js"></script>
 {% endblock %}
 {% block body %}
+<span id="github-button"><a href="https://github.com/mat-1/dreamsmp"><img src="https://cdn.matdoes.dev/dreamsmp/github.png"></a></span>
 <header>
-	<h1 id="main-title">DreamSMP</h1>
+	<h1 id="main-title">Dream SMP</h1>
 	<p id="subtitle">Players: {{ playercount }}/{{ maxplayers }} • Ping: {{ latency|int }}ms</p>
 </header>
 <div id="history">
 	<div class="chartAreaWrapper">
 		<span id="history-markers">
-			<span style="left:1.5rem;">End of Manberg-Pogtopia war, data started getting recorded here</span>
+			{% for marker in markers %}
+				<span style="left:{{ marker.left }};top:{{ marker.top }}">{{ marker.text }}</span>
+			{% endfor %}
 		</span>
 		<div class="chartAreaWrapper2">
 			<canvas id="historyChart"></canvas>
@@ -401,7 +457,7 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 	<div class="user {% if online %}online{% else %}offline{% endif %}" data-uuid="{{ player.uuid }}">
 		
 		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
-		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink">{% endif %}
+		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink"{% if player.live_title %} title="{{ player.live_title }}"{% endif %}>{% endif %}
 		<span class="ign">
 			{{ player.name or player.username }}
 		</span>{% if player.live %}<span> {{ streamingsvg|safe }}</span>{% endif %}

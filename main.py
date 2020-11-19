@@ -62,7 +62,8 @@ async def check_online():
 			'name': player.name,
 			'uuid': uuid,
 			'live': live['live'],
-			'live_url': live.get('url')
+			'live_url': live.get('url'),
+			'live_title': live.get('title')
 		})
 	return players
 
@@ -76,18 +77,26 @@ async def check_streaming_youtube(youtube_id):
 		}
 	) as r:
 		html = await r.text()
-		print(url)
 		data = json.loads(re.findall(r'(?:window\["ytInitialData"\]|var ytInitialData) = (.+?);', html)[0])
 		featured = data['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
 		if 'channelFeaturedContentRenderer' not in featured:
-			return False
+			return {
+				'live': False
+			}
 		featured_video = featured['channelFeaturedContentRenderer']['items'][0]['videoRenderer']
 		viewer_text = featured_video['viewCountText']['runs']
 		live = viewer_text[1]['text'] == ' watching'
+		if not live:
+			return {
+				'live': False
+			}
 		viewers = int(viewer_text[0]['text'].replace(',', ''))
 		title = featured_video['title']['runs'][0]['text']
-		print(title)
-		return live
+		return {
+			'live': True,
+			'title': title,
+			'viewers': viewers
+		}
 
 
 async def check_streaming_twitch(channel_id):
@@ -104,7 +113,15 @@ async def check_streaming_twitch(channel_id):
 		stream = data[0]
 		title = stream['title']
 		viewers = stream['viewer_count']
-	return len(data) > 0
+		return {
+			'live': True,
+			'title': title,
+			'viewers': viewers
+		}
+	else:
+		return {
+			'live': False
+		}
 
 
 def uuid_to_twitch_id(uuid):
@@ -128,7 +145,8 @@ async def check_streaming_from_uuid(uuid):
 	twitch_id = uuid_to_twitch_id(uuid)
 	youtube_id = uuid_to_youtube_id(uuid)
 	if twitch_id:
-		if await check_streaming_twitch(twitch_id):
+		twitch_stream_data = await check_streaming_twitch(twitch_id)
+		if twitch_stream_data['live']:
 			twitch_name = uuid_to_twitch_name(uuid)
 			if twitch_name:
 				url = 'https://www.twitch.tv/' + twitch_name
@@ -136,22 +154,28 @@ async def check_streaming_from_uuid(uuid):
 				url = None
 			return {
 				'live': True,
-				'url': url
+				'url': url,
+				'title': twitch_stream_data['title'],
+				'viewers': twitch_stream_data['viewers'],
 			}
 	if youtube_id:
-		if await check_streaming_youtube(youtube_id):
+		youtube_stream_data = await check_streaming_youtube(youtube_id)
+		if youtube_stream_data['live']:
 			return {
-				'live': True
+				'live': True,
+				'title': youtube_stream_data['title'],
+				'viewers': youtube_stream_data['viewers']
 			}
 	return {
 		'live': False
 	}
 
-async def add_online(uuids, live_uuids):
+async def add_online(uuids, live_uuids, live_titles):
 	await online_coll.insert_one({
 		'time': datetime.now(),
 		'players': uuids,
-		'live': live_uuids
+		'live': live_uuids,
+		'titles': live_titles
 	})
 	for uuid in uuids:
 		if uuid not in uuids_to_minutes_played:
@@ -211,11 +235,14 @@ async def check_server_task():
 			print(online_players)
 			uuids = []
 			live_uuids = []
+			live_titles = {}
 			for player in players:
-				uuids.append(player['uuid'].replace('-', ''))
+				uuid = player['uuid'].replace('-', '')
+				uuids.append(uuid)
 				if player['live']:
-					live_uuids.append(player['uuid'].replace('-', ''))
-			await add_online(uuids, live_uuids)
+					live_uuids.append(uuid)
+					live_titles[uuid] = player['live_title']
+			await add_online(uuids, live_uuids, live_titles)
 		except Exception as e:
 			print(type(e), e)
 			traceback.print_tb()
@@ -309,5 +336,7 @@ def uuid_to_playtime(uuid):
 jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
+with open('markers.json', 'r') as f:
+	jinja_env.globals['markers'] = f.read()
 jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 web.run_app(app)
