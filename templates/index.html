@@ -163,6 +163,15 @@ const indexedHistory = [
 const indexedLiveHistory = [
 	{% for state in history %}[{% for player in state.live %}'{{ player }}',{% endfor %}],{% endfor %}
 ]
+const indexedTitlesHistory = [
+	{% for state in history %}
+	{
+		{% for player in state.titles %}
+			'{{ player }}': '{{ state.titles[player] }}',
+		{% endfor %}
+	},
+	{% endfor %}
+]
 
 const allPlayers = [
 	{% for player in players_list %}{uuid:'{{ player.uuid }}',username:'{{ player.username }}'},{% endfor %}
@@ -200,6 +209,7 @@ function customTooltip(tooltipModel) {
 
 	let historicOnlinePlayers = indexedHistory[tooltipModel.dataPoints[0].index]
 	let historicStreamingPlayers = indexedLiveHistory[tooltipModel.dataPoints[0].index]
+	let historicUuidToTitles = indexedTitlesHistory[tooltipModel.dataPoints[0].index]
 
 	// Set Text
 	var titleLines = tooltipModel.title || [];
@@ -208,9 +218,10 @@ function customTooltip(tooltipModel) {
 		let playerUsername = playerUuid // if the username is unknown just use the uuid
 		let player = allPlayers.find(p => p.uuid === playerUuid)
 		let isLive = historicStreamingPlayers.includes(playerUuid)
+		let streamTitle = historicUuidToTitles[playerUuid]
 		if (player) playerUsername = player.username
 		bodyLines.push(
-			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? ` {{ streamingsvg|safe }}` : ""}`
+			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? ` {{ streamingsvg|safe }}` : ""}${streamTitle ? ` (${streamTitle})` : ""}`
 		)
 	}
 
