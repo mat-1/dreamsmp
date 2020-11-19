@@ -249,15 +249,36 @@ async def check_server_task():
 
 async def get_history():
 	history = []
+	prev_state = {}
+	actual_prev_state = {}
 	async for state in (
 		online_coll
-		.find({'time': {'$gt': datetime.now() - timedelta(hours=24)}})
+		.find({})
+		# .find({'time': {'$gt': datetime.now() - timedelta(hours=24)}})
 		.sort('time', -1)
 	):
 		state['players'] = sorted(state['players'])
+
+
+		state_without_time = {
+			'players': state['players'],
+			'live': state.get('live'),
+			'titles': state.get('titles'),
+		}
+
+		if state_without_time == prev_state:
+			actual_prev_state = state
+			continue
+
+		if actual_prev_state:
+			history.append(
+				actual_prev_state
+			)
 		history.append(
 			state
 		)
+		prev_state = state_without_time
+		actual_prev_state = None
 	return history
 
 async def get_member_playtime(uuid):
@@ -295,6 +316,25 @@ async def index(request):
 		'maxplayers': maxplayers
 	}
 
+sitemap_dict = {
+	'/': {
+		'priority': 1.0,
+		'lastmod': datetime.strftime(datetime.now(), '%Y-%m-%dT%H:%I:%SZ')
+	}
+}
+
+@routes.get('/sitemap.xml')
+async def sitemap(request):
+	context = {
+		'sitemap': sitemap_dict
+	}
+	response = aiohttp_jinja2.render_template(
+		'sitemap.xml',
+		request,
+		context
+	)
+	response.headers['content-type'] = 'application/xml'
+	return response
 
 asyncio.ensure_future(check_server_task())
 
@@ -337,6 +377,6 @@ jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
 with open('markers.json', 'r') as f:
-	jinja_env.globals['markers'] = f.read()
+	jinja_env.globals['markers'] = json.loads(f.read())
 jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 web.run_app(app)

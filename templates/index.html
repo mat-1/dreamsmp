@@ -54,15 +54,15 @@ body {
 .chartAreaWrapper::-webkit-scrollbar-thumb {
 	background-color: #222;
 }
-
-
 .chartAreaWrapper2 {
 	position: relative;
 	height: 100%;
-	width: {{ history|length // 7 }}em
+	width: {{ (history[0].time - history[-1].time).total_seconds() // 1080 }}em
 }
-
-
+.tooltipStreamTitle {
+	opacity: .5;
+	font-style: italic;
+}
 #chartjs-tooltip {
 	opacity: 1;
 	position: absolute;
@@ -102,16 +102,6 @@ body {
 	color: inherit;
 	text-decoration: none;
 }
-#history-markers {
-	position: absolute;
-	color: rgba(255,255,255,.1);
-	font-size: .75rem;
-	height: 100%;
-}
-#history-markers > span {
-	position: absolute;
-	white-space: pre;
-}
 #github-button {
 	position: absolute;
 	top: 0;
@@ -128,6 +118,20 @@ body {
 #github-button img {
 	width: 100%;
 	height: 100%;
+}
+a {
+	color: #5af;
+}
+footer {
+	text-align: center;
+	margin-bottom: 1em;
+	opacity: .7
+}
+footer .twitter {
+	height: 1.5em;
+	width: 1.5em;
+	position: relative;
+	top: .45em;
 }
 
 @media only screen and (max-width: 450px) {
@@ -221,7 +225,7 @@ function customTooltip(tooltipModel) {
 		let streamTitle = historicUuidToTitles[playerUuid]
 		if (player) playerUsername = player.username
 		bodyLines.push(
-			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? ` {{ streamingsvg|safe }}` : ""}${streamTitle ? ` (${streamTitle})` : ""}`
+			`<img src="https://crafatar.com/avatars/${playerUuid}?overlay=true&size=16" class="avatar" style="margin-right:.2em">${playerUsername}${isLive ? ` {{ streamingsvg|safe }}` : ""}${streamTitle ? ` <span class="tooltipStreamTitle">(${streamTitle})</span>` : ""}`
 		)
 	}
 
@@ -452,11 +456,6 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 </header>
 <div id="history">
 	<div class="chartAreaWrapper">
-		<span id="history-markers">
-			{% for marker in markers %}
-				<span style="left:{{ marker.left }};top:{{ marker.top }}">{{ marker.text }}</span>
-			{% endfor %}
-		</span>
 		<div class="chartAreaWrapper2">
 			<canvas id="historyChart"></canvas>
 		</div>
@@ -493,4 +492,7 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 		{{ user(player, false) }}
 	{% endfor %}
 </div>
+<footer>
+	Made by <a href="https://matdoes.dev">mat</a> <a href="https://twitter.com/matdoesdev"><img src="https://cdn.matdoes.dev/dreamsmp/twitter.png" class="twitter"></a>
+</footer>
 {% endblock %}

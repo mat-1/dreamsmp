@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{% for path in sitemap %}
+	<url>
+		<loc>https://dreamsmp.live{{ path }}</loc>
+		<lastmod>{{ sitemap[path].lastmod }}</lastmod>
+		<priority>{{ sitemap[path].priority }}</priority>
+	</url>
+{% endfor %}
+</urlset>
