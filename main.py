@@ -57,7 +57,6 @@ async def check_online():
 		uuid = player.id.replace('-', '')
 		await add_new_player_if_unknown(player.name, uuid)
 		live = await check_streaming_from_uuid(uuid)
-		print('live', live)
 		players.append({
 			'name': player.name,
 			'uuid': uuid,
@@ -132,7 +131,6 @@ def uuid_to_twitch_id(uuid):
 def uuid_to_twitch_name(uuid):
 	for player in player_list:
 		if player['uuid'] == uuid:
-			print(player)
 			return player.get('twitch_name')
 
 def uuid_to_youtube_id(uuid):
@@ -226,13 +224,11 @@ async def check_server_task():
 	await cache_members_playtime()
 	players = await check_online()
 	online_players = players
-	print(online_players)
 	while True:
 		await asyncio.sleep(60 - (time.time() % 60))
 		try:
 			players = await check_online()
 			online_players = players
-			print(online_players)
 			uuids = []
 			live_uuids = []
 			live_titles = {}
@@ -258,6 +254,7 @@ async def get_history():
 		.sort('time', -1)
 	):
 		state['players'] = sorted(state['players'])
+		state['live'] = sorted(state.get('live', []))
 
 
 		state_without_time = {
@@ -291,7 +288,6 @@ async def get_member_playtime(uuid):
 async def cache_members_playtime():
 	for member in player_list:
 		await get_member_playtime(member['uuid'])
-	print(uuids_to_minutes_played)
 
 @routes.get('/')
 @aiohttp_jinja2.template('index.html')
@@ -300,7 +296,6 @@ async def index(request):
 	global player_list
 	history = await get_history()
 	online_players_set = set(player['uuid'].replace('-', '') for player in online_players)
-	print(online_players_set)
 	offline_players = []
 	for player in player_list:
 		if player['uuid'].replace('-', '') not in online_players_set:
@@ -376,7 +371,5 @@ def uuid_to_playtime(uuid):
 jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
-with open('markers.json', 'r') as f:
-	jinja_env.globals['markers'] = json.loads(f.read())
 jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 web.run_app(app)
