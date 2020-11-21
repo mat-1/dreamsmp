@@ -458,7 +458,9 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 <span id="github-button"><a href="https://github.com/mat-1/dreamsmp"><img src="https://cdn.matdoes.dev/dreamsmp/github.png"></a></span>
 <header>
 	<h1 id="main-title">Dream SMP</h1>
-	<p id="subtitle">Players: {{ playercount }}/{{ maxplayers }} • Ping: {{ latency|int }}ms</p>
+	{% if latency %}
+		<p id="subtitle">Players: {{ playercount }}/{{ maxplayers }} • Ping: {{ latency|int }}ms</p>
+	{% endif %}
 </header>
 <div id="history">
 	<div class="chartAreaWrapper">
