@@ -12,15 +12,17 @@ import time
 import os
 import re
 
-ip = os.getenv('ip')
+# ip = os.getenv('ip')
 
-if not ip:
-	import dotenv
-	dotenv.load_dotenv()
-	ip = os.getenv('ip')
+# if not ip:
+# 	import dotenv
+# 	dotenv.load_dotenv()
+# 	ip = os.getenv('ip')
 
-if not ip:
-	raise ValueError('IP not found in .env!')
+# if not ip:
+# 	raise ValueError('IP not found in .env!')
+
+ip = None
 
 twitch_client_id = os.getenv('twitch_client_id')
 twitch_token = os.getenv('twitch_token')
@@ -28,7 +30,10 @@ twitch_token = os.getenv('twitch_token')
 routes = web.RouteTableDef()
 online_players = []
 
-server = mcstatus.MinecraftServer.lookup(ip)
+if ip:
+	server = mcstatus.MinecraftServer.lookup(ip)
+else:
+	server = None
 client = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('dburi'))
 
 online_coll = client.dreamsmp.online
@@ -47,22 +52,49 @@ async def check_online():
 	global server_latency
 	global playercount
 	global maxplayers
-	status = await server.async_status()
-	players = []
-	server_latency = status.latency
-	playercount = status.players.online
-	maxplayers = status.players.max
+	if ip:
+		status = await server.async_status()
+		players = []
+		server_latency = status.latency
+		playercount = status.players.online
+		maxplayers = status.players.max
+	else:
+		status = None
+		players = []
+		server_latency = None
+		playercount = None
+		maxplayers = None
+
+	using_sample = False
 	
-	for player in status.players.sample or []:
-		uuid = player.id.replace('-', '')
-		await add_new_player_if_unknown(player.name, uuid)
+	if ip:
+		sample = status.players.sample or []
+		using_sample = True
+	else:
+		sample = player_list
+
+	for player in sample:
+		uuid = player.id if using_sample else player['uuid']
+		uuid = uuid.replace('-', '')
+		if ip:
+			await add_new_player_if_unknown(player.name, uuid)
 		live = await check_streaming_from_uuid(uuid)
+		player_name = player.name if using_sample else player['username']
+		if not ip and not live['live']: continue
+
+		likely_dream_smp = False
+		if ip:
+			likely_dream_smp = True
+		elif 'title' in live:
+			if 'dreamsmp' in live['title'].lower().replace(' ', ''):
+				likely_dream_smp = True
 		players.append({
-			'name': player.name,
+			'name': player_name,
 			'uuid': uuid,
 			'live': live['live'],
 			'live_url': live.get('url'),
-			'live_title': live.get('title')
+			'live_title': live.get('title'),
+			'likely_on_server': likely_dream_smp
 		})
 	return players
 
@@ -372,4 +404,6 @@ jinja_env.filters['minutes'] = minutes_to_string
 jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
 jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
+jinja_env.globals['orangecirclesvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="orange" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 web.run_app(app)
+

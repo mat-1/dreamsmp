@@ -337,8 +337,14 @@ var chart = new Chart(ctx, {
 			xAxes: [{
 				type: 'time',
 				time: {
-					unit: 'day',
-				}
+					unit: 'hour',
+				},
+				ticks: {
+					major: {
+						enabled: true,
+						fontStyle: 'bold',
+					},
+				},
 			}]
 		},
 		tooltips: {
@@ -470,7 +476,7 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink"{% if player.live_title %} title="{{ player.live_title }}"{% endif %}>{% endif %}
 		<span class="ign">
 			{{ player.name or player.username }}
-		</span>{% if player.live %}<span> {{ streamingsvg|safe }}</span>{% endif %}
+		</span>{% if player.live %}<span> {% if player.likely_on_server %}{{ streamingsvg|safe }}{% else %}{{ orangecirclesvg|safe }}{% endif %}</span>{% endif %}
 		{% if player.live_url %}</a>{% endif %}
 		<span class="playtime">{{ playtime(player.uuid) }} on record</span>
 		
