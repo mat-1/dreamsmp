@@ -372,12 +372,12 @@ var chart = new Chart(ctx, {
 				var targetCtx = document.getElementById('historyChartAxis').getContext('2d');
 				targetCtx.canvas.width = copyWidth;
 				targetCtx.canvas.height = copyHeight;
-				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight)
 			},
-			duration: 1
+			duration: 0
 		},
 		hover: {
-				animationDuration: 0 // duration of animations when hovering an item
+			animationDuration: 0 // duration of animations when hovering an item
 		},
 		responsiveAnimationDuration: 0 // animation duration after a resize
 	}

@@ -43,6 +43,8 @@ player_list = None
 server_latency = None
 uuids_to_minutes_played = {}
 
+history = []
+
 playercount = 0
 maxplayers = 120
 
@@ -201,16 +203,19 @@ async def check_streaming_from_uuid(uuid):
 	}
 
 async def add_online(uuids, live_uuids, live_titles):
-	await online_coll.insert_one({
+	new_doc = {
 		'time': datetime.now(),
 		'players': uuids,
 		'live': live_uuids,
 		'titles': live_titles
-	})
+	}
+	await online_coll.insert_one(new_doc)
 	for uuid in uuids:
 		if uuid not in uuids_to_minutes_played:
 			uuids_to_minutes_played[uuid] = 0
 		uuids_to_minutes_played[uuid] += 1
+	if history:
+		history.append(new_doc)
 
 async def fetch_players():
 	global player_list
@@ -276,38 +281,55 @@ async def check_server_task():
 			traceback.print_tb()
 
 async def get_history():
-	history = []
+	global history
+	if history:
+		return history
+	new_history = []
 	prev_state = {}
 	actual_prev_state = {}
+	removing_ids = []
 	async for state in (
 		online_coll
-		.find({})
-		# .find({'time': {'$gt': datetime.now() - timedelta(hours=24)}})
+		# .find({}, batch_size=1000)
+		.find({'time': {'$gt': datetime.now() - timedelta(days=30)}}, batch_size=1000)
 		.sort('time', -1)
 	):
+		if 'players' not in state:
+			print('skipped state', state)
+			continue
 		state['players'] = sorted(state['players'])
 		state['live'] = sorted(state.get('live', []))
+		state['titles'] = state.get('titles') or {}
 
 
 		state_without_time = {
 			'players': state['players'],
-			'live': state.get('live'),
-			'titles': state.get('titles'),
+			'live': state['live'],
+			'titles': state['titles'],
 		}
 
 		if state_without_time == prev_state:
-			actual_prev_state = state
+			if actual_prev_state == state:
+				removing_ids.append(state['_id'])
+			else:
+				actual_prev_state = state
 			continue
 
 		if actual_prev_state:
-			history.append(
+			new_history.append(
 				actual_prev_state
 			)
-		history.append(
+		new_history.append(
 			state
 		)
 		prev_state = state_without_time
 		actual_prev_state = None
+
+	print('deleting', len(removing_ids))
+	# await online_coll.delete_many({'_id': {'$in': removing_ids}}) # delete duplicates
+
+	history = new_history
+	print('gotten history of', len(history))
 	return history
 
 async def get_member_playtime(uuid):
@@ -326,12 +348,14 @@ async def cache_members_playtime():
 async def index(request):
 	global online_players
 	global player_list
+	print('getting history')
 	history = await get_history()
 	online_players_set = set(player['uuid'].replace('-', '') for player in online_players)
 	offline_players = []
 	for player in player_list:
 		if player['uuid'].replace('-', '') not in online_players_set:
 			offline_players.append(player)
+	print('ok')
 	return {
 		'online': online_players,
 		'offline': offline_players,
