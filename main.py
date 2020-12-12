@@ -215,7 +215,7 @@ async def add_online(uuids, live_uuids, live_titles):
 			uuids_to_minutes_played[uuid] = 0
 		uuids_to_minutes_played[uuid] += 1
 	if history:
-		history.append(new_doc)
+		history.insert(0, new_doc)
 
 async def fetch_players():
 	global player_list
@@ -280,6 +280,21 @@ async def check_server_task():
 			print(type(e), e)
 			traceback.print_tb()
 
+def combine_history_states(states):
+	combined_state = {
+		'players': set(),
+		'live': set(),
+		'titles': {},
+		'time': datetime.now(),
+	}
+	for state in states:
+		combined_state['players'].update(set(state['players']))
+		combined_state['live'].update(set(state['live']))
+		combined_state['titles'].update(state['titles'])
+		if state['time'] < combined_state['time']:
+			combined_state['time'] = state['time']
+	return combined_state
+
 async def get_history():
 	global history
 	if history:
@@ -288,18 +303,33 @@ async def get_history():
 	prev_state = {}
 	actual_prev_state = {}
 	removing_ids = []
+	temp_states = []
+
+	# the max amount of days ago it should get data from
+	get_before = datetime.now() - timedelta(days=30)
+	# when it should stop only getting the peaks
+	simplify_before = datetime.now() - timedelta(days=1)
+
+	last_simplified = get_before
 	async for state in (
 		online_coll
 		# .find({}, batch_size=1000)
-		.find({'time': {'$gt': datetime.now() - timedelta(days=30)}}, batch_size=1000)
-		.sort('time', -1)
+		.find({'time': {'$gt': get_before}}, batch_size=1000)
+		.sort('time', 1)
 	):
-		if 'players' not in state:
-			print('skipped state', state)
-			continue
 		state['players'] = sorted(state['players'])
 		state['live'] = sorted(state.get('live', []))
 		state['titles'] = state.get('titles') or {}
+
+		if state['time'] < simplify_before:
+			temp_states.append(state)
+			last_simplified_ago = state['time'] - last_simplified
+			if last_simplified_ago > timedelta(hours=1):
+				last_simplified = state['time']
+				state = combine_history_states(temp_states)
+				temp_states = []
+			else:
+				continue
 
 
 		state_without_time = {
@@ -309,10 +339,7 @@ async def get_history():
 		}
 
 		if state_without_time == prev_state:
-			if actual_prev_state == state:
-				removing_ids.append(state['_id'])
-			else:
-				actual_prev_state = state
+			actual_prev_state = state
 			continue
 
 		if actual_prev_state:
@@ -328,7 +355,7 @@ async def get_history():
 	print('deleting', len(removing_ids))
 	# await online_coll.delete_many({'_id': {'$in': removing_ids}}) # delete duplicates
 
-	history = new_history
+	history = list(reversed(new_history))
 	print('gotten history of', len(history))
 	return history
 

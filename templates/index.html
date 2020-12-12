@@ -168,13 +168,13 @@ const indexedLiveHistory = [
 	{% for state in history %}[{% for player in state.live %}'{{ player }}',{% endfor %}],{% endfor %}
 ]
 const indexedTitlesHistory = [
-	{% for state in history %}
+	{% for state in history -%}
 	{
-		{% for player in state.titles %}
+		{%- for player in state.titles -%}
 			'{{ player }}': '{{ state.titles[player] }}',
-		{% endfor %}
+		{%- endfor -%}
 	},
-	{% endfor %}
+	{%- endfor %}
 ]
 
 const allPlayers = [
@@ -187,28 +187,24 @@ function customTooltip(tooltipModel) {
 
 	// Create element on first render
 	if (!tooltipEl) {
-			tooltipEl = document.createElement('div');
-			tooltipEl.id = 'chartjs-tooltip';
-			tooltipEl.innerHTML = '<table></table>';
-			document.body.appendChild(tooltipEl);
+		tooltipEl = document.createElement('div')
+		tooltipEl.id = 'chartjs-tooltip'
+		tooltipEl.innerHTML = '<table></table>'
+		document.body.appendChild(tooltipEl)
 	}
 
 	// Hide if no tooltip
 	if (tooltipModel.opacity === 0) {
-			tooltipEl.style.opacity = 0;
-			return;
+		tooltipEl.style.opacity = 0
+		return
 	}
 
 	// Set caret Position
 	tooltipEl.classList.remove('above', 'below', 'no-transform');
 	if (tooltipModel.yAlign) {
-			tooltipEl.classList.add(tooltipModel.yAlign);
+		tooltipEl.classList.add(tooltipModel.yAlign);
 	} else {
-			tooltipEl.classList.add('no-transform');
-	}
-
-	function getBody(bodyItem) {
-			return bodyItem.lines;
+		tooltipEl.classList.add('no-transform');
 	}
 
 	let historicOnlinePlayers = indexedHistory[tooltipModel.dataPoints[0].index]
@@ -216,7 +212,7 @@ function customTooltip(tooltipModel) {
 	let historicUuidToTitles = indexedTitlesHistory[tooltipModel.dataPoints[0].index]
 
 	// Set Text
-	var titleLines = tooltipModel.title || [];
+	var titleLines = tooltipModel.title || []
 	var bodyLines = []
 	for (const playerUuid of historicOnlinePlayers) {
 		let playerUsername = playerUuid // if the username is unknown just use the uuid
@@ -229,43 +225,38 @@ function customTooltip(tooltipModel) {
 		)
 	}
 
-	var innerHtml = '<thead>';
+	var innerHtml = '<thead>'
 
-	titleLines.forEach(function(title) {
-			innerHtml += '<tr><th>' + title + '</th></tr>';
-	});
-	innerHtml += '</thead><tbody>';
+	titleLines.forEach((title) => {
+			innerHtml += '<tr><th>' + title + '</th></tr>'
+	})
+	innerHtml += '</thead><tbody>'
 
-	bodyLines.forEach(function(body, i) {
-			// var colors = tooltipModel.labelColors[i];
-			var style = ''
-			// var style = 'background:' + colors.backgroundColor;
-			// style += '; border-color:' + colors.borderColor;
-			style += '; border-width: 2px';
-			var span = '<span style="' + style + '"></span>';
-			innerHtml += '<tr><td>' + span + body + '</td></tr>';
-	});
-	innerHtml += '</tbody>';
+	bodyLines.forEach((body, i) => {
+		var span = '<span style="border-width: 2px"></span>'
+		innerHtml += '<tr><td>' + span + body + '</td></tr>'
+	})
+	innerHtml += '</tbody>'
 
-	var tableRoot = tooltipEl.querySelector('table');
-	tableRoot.innerHTML = innerHtml;
+	var tableRoot = tooltipEl.querySelector('table')
+	tableRoot.innerHTML = innerHtml
 
 	// `this` will be the overall tooltip
-	var position = this._chart.canvas.getBoundingClientRect();
+	var position = this._chart.canvas.getBoundingClientRect()
 
 	// Display, position, and set styles for font
-	tooltipEl.style.opacity = 1;
-	tooltipEl.style.position = 'absolute';
-	tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
-	tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
-	tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily;
-	tooltipEl.style.fontSize = tooltipModel.bodyFontSize + 'px';
-	tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle;
-	tooltipEl.style.padding = tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px';
-	tooltipEl.style.pointerEvents = 'none';
+	tooltipEl.style.opacity = 1
+	tooltipEl.style.position = 'absolute'
+	tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px'
+	tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px'
+	tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily
+	tooltipEl.style.fontSize = tooltipModel.bodyFontSize + 'px'
+	tooltipEl.style.fontStyle = tooltipModel._bodyFontStyle
+	tooltipEl.style.padding = tooltipModel.yPadding + 'px ' + tooltipModel.xPadding + 'px'
+	tooltipEl.style.pointerEvents = 'none'
 }
 
-Chart.defaults.coloredLine = Chart.defaults.line;
+Chart.defaults.coloredLine = Chart.defaults.line
 Chart.controllers.coloredLine = Chart.controllers.line.extend({
 	draw: function(ease) {
 		var
@@ -310,15 +301,16 @@ Chart.controllers.coloredLine = Chart.controllers.line.extend({
 
 
 var ctx = document.getElementById('historyChart').getContext('2d');
-var chart = new Chart(ctx, {
+var chart
+chart = new Chart(ctx, {
 	type: 'coloredLine',
 	data: {
 		datasets: [{
 			label: 'Online',
 			data: [
-				{% for state in history %}
+				{%- for state in history -%}
 				{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
-				{% endfor %}
+				{%- endfor -%}
 			],
 			borderWidth: 2,
 			borderColor: 'rgba(0,255,0,.5)',
@@ -332,6 +324,9 @@ var chart = new Chart(ctx, {
 			yAxes: [{
 				ticks: {
 					beginAtZero: true
+				},
+				gridLines: {
+					display: false,
 				}
 			}],
 			xAxes: [{
@@ -345,6 +340,9 @@ var chart = new Chart(ctx, {
 						fontStyle: 'bold',
 					},
 				},
+				gridLines: {
+					display: false,
+				}
 			}]
 		},
 		tooltips: {
@@ -366,12 +364,13 @@ var chart = new Chart(ctx, {
 		},
 		animation: {
 			onComplete: function(animation) {
-				var sourceCanvas = chart.chart.canvas;
-				var copyWidth = chart.scales['y-axis-0'].width - 10;
-				var copyHeight = chart.scales['y-axis-0'].height + chart.scales['y-axis-0'].top + 10;
-				var targetCtx = document.getElementById('historyChartAxis').getContext('2d');
-				targetCtx.canvas.width = copyWidth;
-				targetCtx.canvas.height = copyHeight;
+				if (!chart) return
+				var sourceCanvas = chart.chart.canvas
+				var copyWidth = chart.scales['y-axis-0'].width - 10
+				var copyHeight = chart.scales['y-axis-0'].height + chart.scales['y-axis-0'].top + 10
+				var targetCtx = document.getElementById('historyChartAxis').getContext('2d')
+				targetCtx.canvas.width = copyWidth
+				targetCtx.canvas.height = copyHeight
 				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight)
 			},
 			duration: 0
@@ -444,11 +443,7 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 		})
 	}
 }
-
-// chart.canvas.parentNode.style.height = '50vh'
-// chart.canvas.parentNode.style.width = '80vw';
-
-
+setTimeout(() => {console.log('hm');chart.render()}, 2000)
 })
 </script>
 <script src="//cdn.matdoes.dev/dreamsmp/moment.min.js"></script>
@@ -473,7 +468,6 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 
 {% macro user(player, online) -%}
 	<div class="user {% if online %}online{% else %}offline{% endif %}" data-uuid="{{ player.uuid }}">
-		
 		<img src="https://crafatar.com/avatars/{{ player.uuid }}?overlay=true&size=16" class="avatar">
 		{% if player.live_url %}<a href="{{ player.live_url }}" class="streamLink"{% if player.live_title %} title="{{ player.live_title }}"{% endif %}>{% endif %}
 		<span class="ign">
@@ -481,24 +475,23 @@ for (playtimeEl of document.getElementsByClassName('playtime')) {
 		</span>{% if player.live %}<span> {% if player.likely_on_server %}{{ streamingsvg|safe }}{% else %}{{ orangecirclesvg|safe }}{% endif %}</span>{% endif %}
 		{% if player.live_url %}</a>{% endif %}
 		<span class="playtime">{{ playtime(player.uuid) }} on record</span>
-		
 	</div>
 {%- endmacro %}
 
 <div id="player-list">
-	{% for player in online|playtimesort %}
-		{% if player.live %}
+	{%- for player in online|playtimesort -%}
+		{%- if player.live -%}
 			{{ user(player, true) }}
-		{% endif %}
-	{% endfor %}
-	{% for player in online|playtimesort %}
-		{% if not player.live %}
+		{%- endif -%}
+	{%- endfor -%}
+	{%- for player in online|playtimesort -%}
+		{%- if not player.live -%}
 			{{ user(player, true) }}
-		{% endif %}
-	{% endfor %}
-	{% for player in offline|playtimesort %}
+		{%- endif -%}
+	{%- endfor -%}
+	{%- for player in offline|playtimesort -%}
 		{{ user(player, false) }}
-	{% endfor %}
+	{%- endfor -%}
 </div>
 <footer>
 	Made by <a href="https://matdoes.dev">mat</a> <a href="https://twitter.com/matdoesdev"><img src="https://cdn.matdoes.dev/dreamsmp/twitter.png" class="twitter"></a>
