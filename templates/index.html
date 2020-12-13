@@ -207,9 +207,13 @@ function customTooltip(tooltipModel) {
 		tooltipEl.classList.add('no-transform');
 	}
 
-	let historicOnlinePlayers = indexedHistory[tooltipModel.dataPoints[0].index]
-	let historicStreamingPlayers = indexedLiveHistory[tooltipModel.dataPoints[0].index]
-	let historicUuidToTitles = indexedTitlesHistory[tooltipModel.dataPoints[0].index]
+	let index = tooltipModel.dataPoints[0].index
+	if (indexedHistory[index].length === 0) index += 1
+	if (indexedHistory[index].length === 0) index += 1
+
+	let historicOnlinePlayers = indexedHistory[index]
+	let historicStreamingPlayers = indexedLiveHistory[index]
+	let historicUuidToTitles = indexedTitlesHistory[index]
 
 	// Set Text
 	var titleLines = tooltipModel.title || []
@@ -267,55 +271,56 @@ Chart.controllers.coloredLine = Chart.controllers.line.extend({
 			area = this.chart.chartArea,
 			originalDatasets = meta.dataset._children
 				.filter(function(data) {
-					return !isNaN(data._view.y);
-				});
+					return !isNaN(data._view.y)
+				})
 
 		function _setColor(newColor, meta) {
-			meta.dataset._view.borderColor = newColor;
+			meta.dataset._view.borderColor = newColor
 		}
 
 		if (!colors) {
-			Chart.controllers.line.prototype.draw.call(this, ease);
-			return;
+			Chart.controllers.line.prototype.draw.call(this, ease)
+			return
 		}
 
 		for (var i = 2; i <= colors.length; i++) {
 			if (colors[i-1] !== colors[i]) {
-				_setColor(colors[i-1], meta);
-				meta.dataset._children = originalDatasets.slice(startIndex, i);
-				meta.dataset.draw();
-				startIndex = i - 1;
+				_setColor(colors[i-1], meta)
+				meta.dataset._children = originalDatasets.slice(startIndex, i)
+				meta.dataset.draw()
+				startIndex = i - 1
 			}
 		}
 
 		meta.dataset._children = originalDatasets.slice(startIndex);
-		meta.dataset.draw();
-		meta.dataset._children = originalDatasets;
+		meta.dataset.draw()
+		meta.dataset._children = originalDatasets
 
-		points.forEach(function(point) {
-			point.draw(area);
-		});
+		points.forEach((point) => {
+			point.draw(area)
+		})
 	}
-});
+})
 
+const data = [
+	{%- for state in history -%}
+	{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
+	{%- endfor -%}
+]
 
-
-var ctx = document.getElementById('historyChart').getContext('2d');
-var chart
-chart = new Chart(ctx, {
+const ctx = document.getElementById('historyChart').getContext('2d')
+const chart = new Chart(ctx, {
 	type: 'coloredLine',
 	data: {
 		datasets: [{
 			label: 'Online',
-			data: [
-				{%- for state in history -%}
-				{x: new Date('{{ state.time.isoformat() }}'), y: {{ state.players|length }}},
-				{%- endfor -%}
-			],
+			data: data,
 			borderWidth: 2,
 			borderColor: 'rgba(0,255,0,.5)',
 			backgroundColor: 'rgba(0,255,0,.2)',
-		}]
+			fill: false
+		}],
+		allData: [data]
 	},
 	options: {
 		responsive: true,
@@ -323,7 +328,7 @@ chart = new Chart(ctx, {
 		scales: {
 			yAxes: [{
 				ticks: {
-					beginAtZero: true
+					beginAtZero: true,
 				},
 				gridLines: {
 					display: false,
@@ -339,6 +344,8 @@ chart = new Chart(ctx, {
 						enabled: true,
 						fontStyle: 'bold',
 					},
+					autoSkip: false,
+    				maxTicksLimit: 500,
 				},
 				gridLines: {
 					display: false,
@@ -363,7 +370,7 @@ chart = new Chart(ctx, {
 			display: false
 		},
 		animation: {
-			onComplete: function(animation) {
+			{# onComplete: function(animation) {
 				if (!chart) return
 				var sourceCanvas = chart.chart.canvas
 				var copyWidth = chart.scales['y-axis-0'].width - 10
@@ -372,7 +379,7 @@ chart = new Chart(ctx, {
 				targetCtx.canvas.width = copyWidth
 				targetCtx.canvas.height = copyHeight
 				targetCtx.drawImage(sourceCanvas, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight)
-			},
+			}, #}
 			duration: 0
 		},
 		hover: {
@@ -383,7 +390,48 @@ chart = new Chart(ctx, {
 })
 
 let chartAreaWrapper = document.getElementsByClassName('chartAreaWrapper')[0]
-chartAreaWrapper.scrollTo(chartAreaWrapper.scrollWidth, 0);
+chartAreaWrapper.scrollTo(chartAreaWrapper.scrollWidth, 0)
+
+
+chartAreaWrapper.addEventListener('scroll', () => {
+	const firstPoint = data[0]
+	const lastPoint = data[data.length - 1]
+
+	const firstPointX = firstPoint.x / 1000
+	const lastPointX = lastPoint.x / 1000
+
+	const totalWidth = ((firstPointX - lastPointX) / 1080) * 16
+
+	const chartScroll = chartAreaWrapper.scrollLeft
+
+	const newData = []
+	newData.push({
+		x: firstPoint.x,
+		y: NaN
+	})
+	for (let itemIndex=0;itemIndex<data.length;itemIndex++) {
+		const item = data[itemIndex]
+		const itemBefore = itemIndex === 0 ? firstPoint : data[itemIndex - 1]
+		const itemAfter = itemIndex === data.length - 1 ? lastPoint : data[itemIndex + 1]
+
+		const itemPosition = totalWidth - (((firstPointX - item.x / 1000) * 16) / 1080)
+		const itemBeforePosition = totalWidth - (((firstPointX - itemBefore.x / 1000) * 16) / 1080)
+		const itemAfterPosition = totalWidth - (((firstPointX - itemAfter.x / 1000) * 16) / 1080)
+		if (
+			itemBeforePosition > chartScroll
+			&& itemAfterPosition < chartScroll + chartAreaWrapper.offsetWidth
+		) {
+			newData.push(item)
+		}
+	}
+	newData.push({
+		x: lastPoint.x,
+		y: NaN
+	})
+	console.log(newData.length)
+	chart.data.datasets[0].data = newData
+	chart.update()
+})
 
 function highlightPlayerHistory(uuid) {
 	chart.data.datasets[0].colors = []
@@ -399,7 +447,7 @@ function highlightPlayerHistory(uuid) {
 			)
 			chart.data.datasets[0].colors.push(color)
 		}
-	chart.update(0)
+	chart.update()
 	let activeUuid = activePlaytimeDisplay
 	if (activeUuid) {
 		let prevEl = document.querySelector(`div[data-uuid='${activeUuid}']`).getElementsByClassName('playtime')[0]
@@ -411,6 +459,7 @@ function highlightPlayerHistory(uuid) {
 	}
 
 }
+highlightPlayerHistory()
 
 var activePlaytimeDisplay = null
 var clickedPlaytimeDisplay = false

@@ -12,6 +12,10 @@ import time
 import os
 import re
 
+if not os.getenv('token'):
+	from dotenv import load_dotenv
+	load_dotenv()
+
 # ip = os.getenv('ip')
 
 # if not ip:
@@ -304,6 +308,7 @@ async def get_history():
 	actual_prev_state = {}
 	removing_ids = []
 	temp_states = []
+	history = [None]
 
 	# the max amount of days ago it should get data from
 	get_before = datetime.now() - timedelta(days=30)
@@ -376,7 +381,7 @@ async def index(request):
 	global online_players
 	global player_list
 	print('getting history')
-	history = await get_history()
+	player_history = await get_history()
 	online_players_set = set(player['uuid'].replace('-', '') for player in online_players)
 	offline_players = []
 	for player in player_list:
@@ -386,7 +391,7 @@ async def index(request):
 	return {
 		'online': online_players,
 		'offline': offline_players,
-		'history': history,
+		'history': player_history,
 		'players_list': player_list,
 		'playtimes': uuids_to_minutes_played,
 		'latency': server_latency,
@@ -414,7 +419,8 @@ async def sitemap(request):
 	response.headers['content-type'] = 'application/xml'
 	return response
 
-asyncio.ensure_future(check_server_task())
+if os.getenv('dev') == 'true':
+	asyncio.ensure_future(check_server_task())
 
 app = web.Application()
 
@@ -456,5 +462,5 @@ jinja_env.filters['playtimesort'] = playtime_sort
 jinja_env.globals['playtime'] = uuid_to_playtime
 jinja_env.globals['streamingsvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="red" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
 jinja_env.globals['orangecirclesvg'] = '''<span class="liveicon"><svg width="1em" height="1em"><circle stroke="black" stroke-width="3" fill="orange" r=".5em" cx=".5em" cy=".5em"></circle></svg></span>'''
-web.run_app(app)
+web.run_app(app, host=os.getenv('host'))
 
