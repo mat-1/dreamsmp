@@ -421,7 +421,7 @@ async def sitemap(request):
 	response.headers['content-type'] = 'application/xml'
 	return response
 
-if os.getenv('dev') == 'true':
+if os.getenv('dev') != 'true':
 	asyncio.ensure_future(check_server_task())
 
 app = web.Application()
