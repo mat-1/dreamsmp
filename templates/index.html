@@ -407,7 +407,7 @@ let chartAreaWrapper = document.getElementsByClassName('chartAreaWrapper')[0]
 chartAreaWrapper.scrollTo(chartAreaWrapper.scrollWidth, 0)
 
 
-chartAreaWrapper.addEventListener('scroll', () => {
+{# chartAreaWrapper.addEventListener('scroll', () => {
 	const firstPoint = data[0]
 	const lastPoint = data[data.length - 1]
 
@@ -445,7 +445,7 @@ chartAreaWrapper.addEventListener('scroll', () => {
 	console.log(newData.length)
 	chart.data.datasets[0].data = newData
 	chart.update()
-})
+}) #}
 
 function highlightPlayerHistory(uuid) {
 	chart.data.datasets[0].colors = []

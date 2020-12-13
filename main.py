@@ -279,7 +279,8 @@ async def check_server_task():
 				if player['live']:
 					live_uuids.append(uuid)
 					live_titles[uuid] = player['live_title']
-			await add_online(uuids, live_uuids, live_titles)
+			if os.getenv('dev') != 'true':
+				await add_online(uuids, live_uuids, live_titles)
 		except Exception as e:
 			print(type(e), e)
 			traceback.print_tb()
@@ -319,7 +320,7 @@ async def get_history():
 	async for state in (
 		online_coll
 		# .find({}, batch_size=1000)
-		.find({'time': {'$gt': get_before}}, batch_size=1000)
+		.find({'time': {'$gt': get_before}}, batch_size=100)
 		.sort('time', 1)
 	):
 		state['players'] = sorted(state['players'])
@@ -421,8 +422,7 @@ async def sitemap(request):
 	response.headers['content-type'] = 'application/xml'
 	return response
 
-if os.getenv('dev') != 'true':
-	asyncio.ensure_future(check_server_task())
+asyncio.ensure_future(check_server_task())
 
 app = web.Application()
 
