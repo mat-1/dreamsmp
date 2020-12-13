@@ -382,6 +382,8 @@ async def index(request):
 	global player_list
 	print('getting history')
 	player_history = await get_history()
+	if player_history == [None]:
+		return
 	online_players_set = set(player['uuid'].replace('-', '') for player in online_players)
 	offline_players = []
 	for player in player_list:

@@ -181,9 +181,17 @@ const allPlayers = [
 	{% for player in players_list %}{uuid:'{{ player.uuid }}',username:'{{ player.username }}'},{% endfor %}
 ]
 
+window.addEventListener('mousemove', (e) => {
+	let tooltipEl = document.getElementById('chartjs-tooltip')
+	window.mouseX = event.pageX
+	window.mouseY = event.pageY
+	if (tooltipEl) {
+		tooltipEl.style.left = window.mouseX + 'px'
+	}
+}, false)
+
 function customTooltip(tooltipModel) {
-	// Tooltip Element
-	var tooltipEl = document.getElementById('chartjs-tooltip');
+	let tooltipEl = document.getElementById('chartjs-tooltip')
 
 	// Create element on first render
 	if (!tooltipEl) {
@@ -232,7 +240,7 @@ function customTooltip(tooltipModel) {
 	var innerHtml = '<thead>'
 
 	titleLines.forEach((title) => {
-			innerHtml += '<tr><th>' + title + '</th></tr>'
+		innerHtml += '<tr><th>' + title + '</th></tr>'
 	})
 	innerHtml += '</thead><tbody>'
 
@@ -251,7 +259,8 @@ function customTooltip(tooltipModel) {
 	// Display, position, and set styles for font
 	tooltipEl.style.opacity = 1
 	tooltipEl.style.position = 'absolute'
-	tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px'
+	{# tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px' #}
+	tooltipEl.style.left = window.mouseX + 'px'
 	tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px'
 	tooltipEl.style.fontFamily = tooltipModel._bodyFontFamily
 	tooltipEl.style.fontSize = tooltipModel.bodyFontSize + 'px'
@@ -308,6 +317,10 @@ const data = [
 	{%- endfor -%}
 ]
 
+Chart.Tooltip.positioners.cursor = function(chartElements, coordinates) {
+  return coordinates
+}
+
 const ctx = document.getElementById('historyChart').getContext('2d')
 const chart = new Chart(ctx, {
 	type: 'coloredLine',
@@ -356,7 +369,8 @@ const chart = new Chart(ctx, {
 			enabled: false,
 			intersect: false,
 			custom: customTooltip,
-			mode: 'index'
+			mode: 'index',
+			position: 'average'
 		},
 		elements: {
 			point: {
