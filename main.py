@@ -16,7 +16,7 @@ if not os.getenv('token'):
 	from dotenv import load_dotenv
 	load_dotenv()
 
-# ip = os.getenv('ip')
+ip = os.getenv('ip')
 
 # if not ip:
 # 	import dotenv
@@ -26,7 +26,7 @@ if not os.getenv('token'):
 # if not ip:
 # 	raise ValueError('IP not found in .env!')
 
-ip = None
+# ip = None
 
 twitch_client_id = os.getenv('twitch_client_id')
 twitch_token = os.getenv('twitch_token')
@@ -40,8 +40,9 @@ else:
 	server = None
 client = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('dburi'))
 
-online_coll = client.dreamsmp.online
-players_coll = client.dreamsmp.players
+# you might want to change the db name here
+online_coll = client.hermitcraft.online
+players_coll = client.hermitcraft.players
 
 player_list = None
 server_latency = None
@@ -79,6 +80,8 @@ async def check_online():
 	else:
 		sample = player_list
 
+	sample = list(sorted(sample, key=lambda p: (p.id if using_sample else p['uuid'])))
+	
 	for player in sample:
 		uuid = player.id if using_sample else player['uuid']
 		uuid = uuid.replace('-', '')
@@ -88,19 +91,19 @@ async def check_online():
 		player_name = player.name if using_sample else player['username']
 		if not ip and not live['live']: continue
 
-		likely_dream_smp = False
+		likely_on_server = False
 		if ip:
-			likely_dream_smp = True
+			likely_on_server = True
 		elif 'title' in live:
-			if 'dreamsmp' in live['title'].lower().replace(' ', ''):
-				likely_dream_smp = True
+			if 'hermitcraft' in live['title'].lower().replace(' ', ''):
+				likely_on_server = True
 		players.append({
 			'name': player_name,
 			'uuid': uuid,
 			'live': live['live'],
 			'live_url': live.get('url'),
 			'live_title': live.get('title'),
-			'likely_on_server': likely_dream_smp
+			'likely_on_server': likely_on_server
 		})
 	return players
 
@@ -294,6 +297,7 @@ def combine_history_states(states):
 	}
 	for state in states:
 		combined_state['players'].update(set(state['players']))
+		state['players'] = sorted(state['players'])
 		combined_state['live'].update(set(state['live']))
 		combined_state['titles'].update(state['titles'])
 		if state['time'] < combined_state['time']:
@@ -427,6 +431,7 @@ asyncio.ensure_future(check_server_task())
 app = web.Application()
 
 app.add_routes(routes)
+app.add_routes([web.static('/', 'static')])
 
 jinja_env = aiohttp_jinja2.setup(
 	app,
